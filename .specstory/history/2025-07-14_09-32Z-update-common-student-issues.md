@@ -3205,7 +3205,60 @@ Looking at what you listed: `clientIP, clientPort, clientSocket, clientAddress, 
 Is it:
 - To organize client data for easier management?
 - To provide methods for client operations?
-- 
+- Both?
+
+**And for the infinite loop - you're absolutely right!**
+
+**What do you think the structure of that infinite loop should be?**
+
+Think about this pattern:
+```cpp
+while (true) {
+    // What goes here?
+    // 1. Set up fd_set with sockets to monitor
+    // 2. Call select()
+    // 3. Check which sockets are ready
+    // 4. Handle ready sockets...
+}
+```
+
+**What do you think should be the first step inside that loop?**
+
+---
+
+_**User**_
+
+I started the loop, now explain to me what is the input arguments of the FD_SET() what is set?
+
+---
+
+_**Assistant**_
+
+Great question! I can see you've started implementing the `select()` structure and you're working on understanding the `FD_SET()` function. Let me guide you through discovering what's happening with your code.
+
+**Looking at your line:**
+```cpp
+FD_SET(serverSocket, &set)
+```
+
+**What do you think `&set` is referring to?** 
+
+Look at your variable declarations - you have `fd_set readfds;` declared earlier. **What do you think the relationship is between `readfds` and `set`?**
+
+The `FD_SET()` function takes two arguments:
+1. **The file descriptor** (you correctly have `serverSocket`)
+2. **A pointer to an `fd_set`** (this is where the issue is)
+
+**Here's a discovery question:** If you want to add `serverSocket` to your `readfds` set (the set of file descriptors you want to monitor for reading), what do you think the second argument should be?
+
+Think about it this way:
+- You declared: `fd_set readfds;`
+- You want to add `serverSocket` to that set
+- `FD_SET()` needs a pointer to the set
+
+**What do you think `&set` should actually be in your code?**
+
+Also, **what do you think you need to do to `readfds` before you start adding file descriptors to it?** Remember those helper functions: `FD_ZERO()`, `FD_SET()`, etc.
 
 ---
 

@@ -23,12 +23,17 @@ int main ()
 {
     //Create socket
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-
+    
     if (serverSocket == -1) {
         std::cerr << "Error creating socket" << std::endl;
         return 1;
     }
 
+    fd_set readfds;
+    fd_set writefds;
+    struct timeval timeout = 10000;
+
+    FD_SET(serverSocket, &readfds);
     //Create serverAddress
     sockaddr_in serverAddress;
     serverAddress.sin_family = AF_INET;
@@ -41,15 +46,20 @@ int main ()
             close(serverSocket);
             return 2;
         }
-    
+
     //Listen
     if (listen(serverSocket, 5) == -1) {
         std::cerr << "Error listening" << std::endl;
         close(serverSocket);
         return 3;
     }
-
     std::cout << "Server listening on port 8080" << std::endl;
+
+    while(true){
+        select(1, &readfds, &writefds, NULL, );
+    }
+    
+
 
     //Accept connections
     sockaddr_in clientAddress;
@@ -69,7 +79,7 @@ int main ()
             << std::endl;
     
     // select()implementation
-    //int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
+    int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
     
     //You must never do a read or a write operation without going through poll() (or equivalent)
     
