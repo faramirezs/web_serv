@@ -213,6 +213,20 @@
   - **Status:** Learning (2025-07-23)
   - **Evidence/Notes:** Received foundational explanation of select() prototype, parameters (nfds, readfds, writefds, exceptfds, timeout), and helper functions (FD_ZERO, FD_SET, FD_CLR, FD_ISSET). Ready for implementation.
 
+### Webserv Project - select() Multi-client MVP (2025-07-28)
+- **Concept: select() for Multi-client Handling**
+  - **Status:** Mastered (2025-07-28)
+  - **Evidence/Notes:** Implemented robust main loop with select(), fd_set rebuild, correct nfds calculation, and client management using std::set<int>. Handles accept(), recv(), send(), and client disconnects. Debugged infinite loop and timeout behavior.
+- **Concept: fd_set and nfds Calculation**
+  - **Status:** Mastered (2025-07-28)
+  - **Evidence/Notes:** Correctly finds highest fd using *clients.rbegin() and serverSocket. Understands why max_size() is incorrect. Rebuilds fd_set every loop.
+- **Concept: select() Timeout Semantics**
+  - **Status:** Mastered (2025-07-28)
+  - **Evidence/Notes:** Discovered that select() only waits for timeout if no fd is ready. Timeout struct must be re-initialized every loop. Explored how to implement true server idle timeout.
+- **Concept: Safe Client Removal**
+  - **Status:** Mastered (2025-07-28)
+  - **Evidence/Notes:** Learned to safely erase from set while iterating (using iterator increment before erase). Handles client disconnects and cleans up resources.
+
 ## Project Transition:
 - **Previous Focus:** C++ Module Learning (modules 00-04)
 - **Current Focus:** Real-world Application Development (webserv HTTP server)

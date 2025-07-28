@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <set>
 
 /* struct sockaddr {
     unsigned short sa_family;
@@ -19,6 +20,9 @@ struct sockaddr_in {
 struct in_addr {
     unsigned long s_addr; // 4 bytes long
 }; */
+
+
+
 int main ()
 {
     //Create socket
@@ -31,7 +35,8 @@ int main ()
 
     fd_set readfds;
     fd_set writefds;
-    struct timeval timeout = 10000;
+    std::set<int> clients;
+    struct timeval timeout;
 
     FD_SET(serverSocket, &readfds);
     //Create serverAddress
@@ -54,46 +59,69 @@ int main ()
         return 3;
     }
     std::cout << "Server listening on port 8080" << std::endl;
-
-    while(true){
-        select(1, &readfds, &writefds, NULL, );
-    }
     
-
-
-    //Accept connections
     sockaddr_in clientAddress;
     socklen_t clientSize = sizeof(clientAddress);
-    int clientSocket = accept(serverSocket, (sockaddr *)&clientAddress, &clientSize);
-    if (clientSocket == -1) {
-        std::cerr << "Error accepting request" << std::endl;
-        close(serverSocket);
-        return 4;
-    }
-
-    //Get client's IP address and port
+    int clientSocket;
     char clientIP[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &(clientAddress.sin_addr), clientIP, INET_ADDRSTRLEN);
-    int clientPort = ntohs(clientAddress.sin_port);
-    std::cout << "Accepted connection from " << clientIP << ":" << clientPort
-            << std::endl;
-    
-    // select()implementation
-    int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
-    
-    //You must never do a read or a write operation without going through poll() (or equivalent)
-    
+    int clientPort;
+    int fd;
     char recv_buffer[1024];
-    int recved = recv(clientSocket, recv_buffer, 1024, 0);
-    std::cout << "Received " << recved << " bytes." << std::endl;
+    int recved;
+    int sent;
+    int nfds;
+    
+    while(true){
+        FD_ZERO(&readfds); // We rubuild the whole set before select call.
+        FD_SET(serverSocket, &readfds); // Adds server socket
+        for (std::set<int>::iterator it = clients.begin(); it != clients.end(); ++it) {
+            fd = *it;
+            FD_SET(fd, &readfds);
+        }
 
-    //const char *message = "Hello from server!\n";
-    int sent = send(clientSocket, recv_buffer, recved, 0);
-    std::cout << "Sent " << sent << " bytes." << std::endl;
+        nfds = serverSocket + 1;
+        if (!clients.empty())
+            if(*clients.rbegin() > serverSocket)
+                nfds = *clients.rbegin() + 1;
 
-    // Close sockets
+        timeout.tv_sec = 10;
+        select(nfds, &readfds, &writefds, NULL, &timeout);
+        
+        if (FD_ISSET(serverSocket, &readfds)) {
+            
+            clientSocket = accept(serverSocket, (sockaddr *)&clientAddress, &clientSize);
+            if (clientSocket == -1) {
+                std::cerr << "Error accepting request" << std::endl;
+                close(serverSocket);
+                return 4;
+            }
+            clients.insert(clientSocket);
+            inet_ntop(AF_INET, &(clientAddress.sin_addr), clientIP, INET_ADDRSTRLEN);
+            clientPort = ntohs(clientAddress.sin_port);
+            std::cout << "Accepted connection from " << clientIP << ":" << clientPort
+                    << std::endl;
+        }
+        
+        for (std::set<int>::iterator it = clients.begin(); it != clients.end();) {
+            fd = *it;
+            if(FD_ISSET(fd, &readfds)) {
+                if((recved = recv(fd, recv_buffer, 1024, 0))<= 0) {
+                    clients.erase(it++);
+                    close(fd);
+                    it = clients.erase(it);
+                    continue;
+                }
+
+                std::cout << "recv_buffer: " << recv_buffer << std::endl;
+                std::cout << "Received " << recved << " bytes." << std::endl;
+                sent = send(fd, recv_buffer, recved, 0);
+                std::cout << "Sent " << sent << " bytes." << std::endl;
+                close(fd);
+                ++it;
+            }
+        }
+    }
     close(serverSocket);
-    close(clientSocket);
 
     return 0;
 }

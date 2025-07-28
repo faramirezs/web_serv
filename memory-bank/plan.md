@@ -6,7 +6,7 @@
 # Problem-Solving Plan
 
 **Date Created:** 2025-07-15 (ISO 8601 format: YYYY-MM-DD)
-**Last Updated:** 2025-07-23 (ISO 8601 format: YYYY-MM-DD)
+**Last Updated:** 2025-07-28 (ISO 8601 format: YYYY-MM-DD)
 **Student Identifier:** alejiri
 
 ## Current Problem Focus
@@ -88,11 +88,16 @@
 - **Success criteria:** Client can connect via telnet, send text, receive echo back
 - **Status:** Working perfectly - proven socket foundation
 
-### Phase 2: Multiplexing (Current Focus)
-- **Goal:** Implement select() for non-blocking I/O
-- **Reasoning:** Required by webserv subject, enables handling of multiple clients
-- **Key learning:** Event-driven programming model, avoiding busy-waiting
-- **Next step:** Replace blocking recv/send with select() monitoring
+### Phase 2: Non-blocking Multi-client (Updated 2025-07-28)
+**MVP Goal:** Robust multi-client echo server using select()
+- Use std::set<int> to track client sockets
+- Rebuild fd_set every loop, add server and all clients
+- Calculate nfds as max(serverSocket, *clients.rbegin()) + 1
+- Accept new clients, echo data, handle disconnects
+- Re-initialize timeout before each select() call
+- Debug infinite loop and timeout behavior
+- Safely remove disconnected clients from set while iterating
+**Success:** Multiple telnet clients connect, send/receive data, and disconnect cleanly
 
 ### Phase 3: HTTP Protocol
 - **Goal:** Serve basic HTTP responses instead of echo
@@ -161,17 +166,27 @@
   - Learned fd_set operations: FD_ZERO, FD_SET, FD_CLR, FD_ISSET
   - Identified file descriptors to monitor: serverSocket (new connections) and clientSocket(s) (data from existing clients)
   - Ready to implement select() integration with existing echo server
+- ✅ **Multi-client Echo Server MVP**: Implemented echo server supporting multiple clients with select()
+  - Integrated select() for non-blocking I/O, replaced blocking recv/send
+  - Used std::set<int> to track active client sockets
+  - Rebuilt fd_set in each loop, added server and client sockets
+  - Calculated nfds as max(serverSocket, *clients.rbegin()) + 1
+  - Accepted new clients, echoed data, handled disconnects
+  - Re-initialized timeout before each select() call
+  - Debugged infinite loop and timeout behavior
+  - Safely removed disconnected clients from set while iterating
+  - Tested with multiple telnet clients - success!
 
 ### Current Focus:
-- **select() Integration**: Adding select() to echo server for multi-client handling
-- **Learning Goal**: Transform blocking single-client server into non-blocking multi-client server
-- **Technical Challenge**: Understanding file descriptor sets and select() return values
+- **HTTP Protocol Implementation**: Parsing HTTP requests and serving HTTP responses
+- **Learning Goal**: Understand HTTP request/response lifecycle, implement request parsing
+- **Technical Challenge**: Correctly parsing HTTP headers and managing request methods
 
 ### Next Actions:
-- Identify which file descriptors to monitor (serverSocket + active client sockets)
-- Implement select() loop with fd_set operations (FD_ZERO, FD_SET, FD_ISSET)
-- Handle new client connections vs existing client data separately
-- Test with multiple concurrent telnet connections
+- Research HTTP request methods (GET, POST, DELETE) and response structure
+- Implement basic HTTP request parsing - extract method, path, version
+- Implement HTTP response construction - status line, headers, body
+- Test with simple HTTP requests using telnet or curl
 
 ---
 

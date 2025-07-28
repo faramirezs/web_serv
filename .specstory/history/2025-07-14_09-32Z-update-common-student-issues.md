@@ -3262,3 +3262,1154 @@ Also, **what do you think you need to do to `readfds` before you start adding fi
 
 ---
 
+_**User**_
+
+Could you please provide a big picture overview of a roadmap (mvp based) of the whole webserv project meeting the subject requeriments?
+
+---
+
+_**Assistant**_
+
+I'll analyze the webserv project workspace and provide a comprehensive MVP-based roadmap that meets all the subject requirements. Let me search for relevant code and documentation first. I'll provide a comprehensive MVP-based roadmap for the webserv project based on the subject requirements and your current progress. Let me first analyze your existing code and the subject requirements. I'll analyze your webserv project workspace and provide a comprehensive MVP-based roadmap that meets all the subject requirements. Let me search for relevant code and documentation first. I'll analyze your webserv project workspace and provide a comprehensive MVP-based roadmap that meets all the subject requirements. I'll analyze your webserv project and provide a comprehensive MVP-based roadmap that meets all the subject requirements. Let me first examine your current progress and the complete requirements. I'll analyze your webserv project workspace and provide a comprehensive MVP-based roadmap that meets all the subject requirements. Let me search for relevant code and documentation first. I'll provide you with a comprehensive MVP-based roadmap for the entire webserv project. Let me analyze the subject requirements and create a strategic development path that builds complexity incrementally.
+
+## Webserv Project MVP Roadmap
+
+### **Phase 1: Core Socket Foundation** ✅ COMPLETED
+**MVP Goal:** Prove socket communication works
+- ✅ Basic socket creation, binding, listening
+- ✅ Single client connection handling
+- ✅ Echo server functionality (recv/send)
+- **Success:** Client connects via telnet, sends data, receives echo
+
+### **Phase 2: Non-blocking Multi-client** 🔄 CURRENT
+**MVP Goal:** Handle multiple clients without blocking
+- Implement `select()` for I/O multiplexing
+- Manage multiple client connections simultaneously
+- Event-driven server loop architecture
+- **Success:** Multiple telnet clients connect and echo independently
+
+### **Phase 3: Basic HTTP Protocol**
+**MVP Goal:** Serve actual HTTP responses instead of echo
+- Parse minimal HTTP requests (`GET /` only)
+- Generate basic HTTP responses with proper headers
+- Return simple HTML content or 404 errors
+- **Success:** Browser connects and displays basic webpage
+
+### **Phase 4: Static File Serving**
+**MVP Goal:** Serve real files from filesystem
+- File system navigation and security (prevent `../` attacks)
+- MIME type detection for different file types
+- Basic error handling (404, 403, 500)
+- **Success:** Browser can load HTML, CSS, images from server
+
+### **Phase 5: Configuration File**
+**MVP Goal:** Dynamic server configuration
+- Parse basic config file (port, server_name, document_root)
+- Multiple server blocks support
+- Error pages configuration
+- **Success:** Server starts with custom config, serves from different roots
+
+### **Phase 6: HTTP Methods & Upload**
+**MVP Goal:** Support POST requests and file uploads
+- Parse POST requests with body content
+- Handle file uploads to designated directory
+- Support DELETE method for file removal
+- **Success:** Browser can upload files via forms
+
+### **Phase 7: CGI Integration**
+**MVP Goal:** Execute external scripts
+- Fork/exec process management for CGI scripts
+- Environment variable setup for CGI
+- Capture CGI output and return as HTTP response
+- **Success:** PHP/Python scripts execute and return dynamic content
+
+### **Phase 8: Production Readiness**
+**MVP Goal:** Robust, standards-compliant server
+- Comprehensive HTTP status codes
+- Request/response header validation
+- Resource management and cleanup
+- **Success:** Passes subject evaluation criteria
+
+## Strategic Reasoning for This Roadmap:
+
+**Why This Order:**
+1. **Socket foundation first** - Everything builds on basic network communication
+2. **select() second** - Subject requirement, enables everything else
+3. **HTTP protocol third** - Transforms from echo to web server
+4. **Static files fourth** - Most common web server functionality
+5. **Config file fifth** - Enables flexibility and multiple virtual hosts
+6. **Methods/upload sixth** - Adds interactivity
+7. **CGI seventh** - Most complex feature, needs stable foundation
+8. **Polish last** - Refinement when core functionality works
+
+**Risk Mitigation:**
+- Each phase produces a working server
+- Can stop at any phase and have functional (though limited) HTTP server
+- Early phases validate architecture decisions
+- Complex features (CGI) built on proven foundation
+
+**Subject Compliance:**
+- ✅ Non-blocking I/O (Phase 2)
+- ✅ Multiple ports (Phase 5 - config file)
+- ✅ File uploads (Phase 6)
+- ✅ GET/POST/DELETE methods (Phases 3, 6)
+- ✅ CGI support (Phase 7)
+- ✅ Configuration file (Phase 5)
+
+## Current Focus Decision:
+
+Since you're in Phase 2 and learning about `select()`, **should we continue implementing the multi-client select() functionality, or would you prefer to see the bigger picture of how HTTP parsing will work in Phase 3?**
+
+The beauty of this roadmap is that each phase is a complete, testable milestone. You could theoretically submit after Phase 4 and have a working static web server!
+
+What do you think about this progression? Does it align with how you want to approach the project?
+
+---
+
+_**User**_
+
+I like the proposed roadmap, but I think we need to design the data structures that are appropiated for this, in phase 2 I would like to include also the posibility to have multiple servers, that way we can avoid refactoring later, when we do config file parsing. What do you think?
+
+---
+
+_**Assistant**_
+
+Excellent strategic thinking! You're absolutely right - designing the proper data structures now in Phase 2 will save massive refactoring later. Planning for multiple servers from the beginning is much smarter than retrofitting it after Phase 5.
+
+**Let me guide you through this architectural decision with some key questions:**
+
+**First, let's think about what a "server" represents in your webserv:**
+
+Looking at the subject requirements, each server can have different:
+- Port numbers
+- Server names  
+- Document roots
+- Error pages
+
+**So here's the design question:** What do you think the relationship is between:
+- **Physical sockets** (the actual file descriptors)
+- **Server configurations** (the settings from config file)
+- **Client connections** (individual connected clients)
+
+**Think about this scenario:**
+- Server A listens on port 8080, serves from `/var/www/site1`
+- Server B listens on port 8081, serves from `/var/www/site2`  
+- Client connects to port 8080 → which server config should handle it?
+
+**Here's a key architectural question:** When `select()` tells you that a socket is ready, how will you know:
+1. Is it a server socket (new connection) or client socket (data)?
+2. If it's a server socket, which server configuration applies?
+3. If it's a client socket, which server is handling that client?
+
+**What data structures do you think would help you manage this mapping efficiently?**
+
+Think about how you might organize:
+- A collection of server configurations
+- A collection of listening sockets  
+- A collection of active client connections
+- The relationships between them
+
+What's your instinct about how to structure this?
+
+---
+
+_**User**_
+
+Could you give me more hints?
+
+---
+
+_**Assistant**_
+
+Absolutely! Let me give you more concrete hints to help you design these data structures.
+
+**Think about this like organizing a hotel with multiple buildings:**
+
+**Hint 1: Server Configuration**
+```cpp
+// What information would each "server" need to store?
+struct ServerConfig {
+    int port;                    // Which port does this server listen on?
+    std::string server_name;     // What's the server's name?
+    std::string document_root;   // Where are the files served from?
+    // ... more config later
+};
+```
+
+**Hint 2: Client Connection**
+```cpp
+// What do you need to track for each connected client?
+struct ClientConnection {
+    int socket_fd;              // The client's socket file descriptor
+    ServerConfig* server;       // Which server is handling this client?
+    std::string client_ip;      // Client's IP address
+    // ... request parsing state later
+};
+```
+
+**Hint 3: The Mapping Problem**
+Consider these containers:
+```cpp
+std::vector<ServerConfig> servers;           // All your server configurations
+std::map<int, ServerConfig*> socket_to_server; // fd → which server config
+std::map<int, ClientConnection> active_clients; // fd → client info
+```
+
+**Key Questions to Guide Your Thinking:**
+
+1. **When you call `accept()` on `serverSocket`**, how do you know which `ServerConfig` should handle the new client?
+
+2. **When `select()` says socket `42` has data ready**, how do you quickly look up:
+   - Is it a server socket or client socket?
+   - Which server configuration applies?
+
+3. **What's the relationship between a listening socket (port 8080) and its `ServerConfig`?**
+
+**Hint 4: The Lookup Pattern**
+```cpp
+// When select() returns, you'll need fast lookups like:
+if (socket_to_server.find(ready_fd) != socket_to_server.end()) {
+    // It's a server socket - new client connecting
+    ServerConfig* server = socket_to_server[ready_fd];
+    // accept() and create new ClientConnection
+} else if (active_clients.find(ready_fd) != active_clients.end()) {
+    // It's a client socket - existing client sending data
+    ClientConnection& client = active_clients[ready_fd];
+    // recv() and process with client.server config
+}
+```
+
+**What do you think about this approach?** Does this help you see how the pieces fit together?
+
+---
+
+_**User**_
+
+Lets focus on the MVP we need to iterate, for now we just need to have a multi client serve using select. Lets put all our effort here. I would like to complete this in 30 minutes.
+
+---
+
+_**Assistant**_
+
+Great focus! To achieve a multi-client echo server using `select()` in 30 minutes, let's clarify the MVP steps and the core data structure you need.
+
+**Guiding Questions:**
+
+1. **How will you keep track of all active client sockets?**
+   - Would a simple `std::set<int>` or `std::vector<int>` of client file descriptors work for now?
+
+2. **What should your main loop do each iteration?**
+   - Rebuild the `fd_set` with the server socket and all client sockets
+   - Call `select()`
+   - For each socket that is ready:
+     - If it's the server socket: `accept()` a new client and add its fd to your set/vector
+     - If it's a client socket: `recv()` data, echo it back, and handle disconnects
+
+3. **What is the stopping condition for a client?**
+   - If `recv()` returns 0 or negative, the client disconnected—remove its fd from your set/vector and close it
+
+**Try sketching out:**
+- How you would rebuild the `fd_set` each loop
+- How you would iterate over all possible fds after `select()` returns
+
+**What do you think is the simplest way to store and iterate over all client sockets for this MVP?**
+
+---
+
+_**User**_
+
+Im not sure the difference between set and vector. 
+The main loop needs to: 
+- call select.
+- if select returns, we use FD_ISSET() to find which socket is ready.
+- For each socket that is ready, if it is the server we call accept and get client details, if its a client we use recv() for that one, if returns 0 or negative client disconnected.
+- then we update the fd_set for r and w using: - `FD_ZERO(&set)` - clears the set and `FD_SET(fd, &set)` - adds a file descriptor
+
+
+
+---
+
+_**Assistant**_
+
+Great summary of the main loop logic! Let’s clarify the difference between `std::set` and `std::vector` for your use case:
+
+- **`std::vector<int>`** is a dynamic array. It’s fast to add/remove at the end, but removing a specific element (like a disconnected client) requires searching through the vector.
+- **`std::set<int>`** is an ordered collection of unique elements. It’s fast to add, remove, and check if an element exists, but it doesn’t preserve insertion order.
+
+**For your multi-client server:**
+- If you want fast lookup and removal of client sockets (when a client disconnects), `std::set<int>` is usually more convenient.
+- If you want to iterate over all client sockets in order, `std::vector<int>` is fine, but you’ll need to handle removals carefully.
+
+**Key question:**  
+What do you think will be more common in your server:  
+- Frequently adding/removing client sockets as clients connect/disconnect?  
+- Or mostly iterating over all clients in a fixed order?
+
+**For most echo servers, `std::set<int>` is a good choice** because clients can disconnect at any time, and you want to quickly remove their socket from your collection.
+
+**Does this help you decide which container to use for your client sockets?**  
+What would your loop look like if you used a `std::set<int>` for client sockets?
+
+---
+
+_**User**_
+
+Explain me how to use std::set<int> 
+
+---
+
+_**Assistant**_
+
+Great question! Let’s connect this to what you already know about containers.
+
+**Big picture:**  
+`std::set<int>` is a C++ Standard Library container that stores unique integers in sorted order. It’s very efficient for adding, removing, and checking if a value exists.
+
+**Key operations you’ll use:**
+
+- **Add a client socket:**  
+  ```cpp
+  std::set<int> clients;
+  clients.insert(clientSocket); // Adds clientSocket to the set
+  ```
+
+- **Remove a client socket:**  
+  ```cpp
+  clients.erase(clientSocket); // Removes clientSocket from the set
+  ```
+
+- **Check if a socket is in the set:**  
+  ```cpp
+  if (clients.count(clientSocket)) {
+      // clientSocket is in the set
+  }
+  ```
+
+- **Iterate over all client sockets:**  
+  ```cpp
+  for (std::set<int>::iterator it = clients.begin(); it != clients.end(); ++it) {
+      int fd = *it;
+      // Use fd (for example, FD_SET(fd, &readfds))
+  }
+  ```
+
+**Why is this useful for your server?**  
+- You can quickly add new clients as they connect.
+- You can remove clients when they disconnect.
+- You can easily loop over all clients to update your `fd_set` before each `select()` call.
+
+**What do you think would be the first place in your code where you’d use `clients.insert(clientSocket)`?**
+
+---
+
+_**User**_
+
+Do i need to include a cpp library for set to work?
+
+---
+
+_**Assistant**_
+
+Great question! Yes, to use `std::set` in C++, you need to include the appropriate standard library header.
+
+**Which header do you think you need to include for `std::set`?**
+
+Think about how you include `<vector>` for `std::vector` and `<map>` for `std::map`. What do you think the pattern is for `set`?
+
+**Try adding this line near your other includes:**
+```cpp
+#include <set>
+```
+Does this help your code recognize `std::set<int>`?
+
+---
+
+_**User**_
+
+Do i need a client class to store:
+clientAddress
+clientSize
+clientSocket
+clientIP
+clientPort
+
+? or is better to use a struct? help me decide.
+
+---
+
+_**Assistant**_
+
+Great question! Let’s connect this to your current needs and the MVP you’re building.
+
+**Big picture:**  
+For a simple multi-client echo server MVP, you only need to track the client socket file descriptors (for use with `select()` and `recv()`/`send()`). You don’t need to store all the client details unless you plan to use them for logging, advanced features, or HTTP parsing later.
+
+**Struct vs. Class:**
+- A **struct** is perfect for grouping simple data (like socket, IP, port) with no behavior (methods).
+- A **class** is useful if you want to add methods (like `sendResponse()`, `closeConnection()`) or encapsulate more complex logic.
+
+**Guiding questions:**
+- Do you need to perform operations on each client (beyond just storing their info)?
+- Will you need to extend this with more features (like HTTP parsing state) soon?
+
+**For your MVP:**  
+A `struct` is simpler and totally sufficient. You can always refactor to a class later if you need more functionality.
+
+**Example:**
+```cpp
+struct ClientInfo {
+    int socket;
+    sockaddr_in address;
+    socklen_t addr_len;
+    std::string ip;
+    int port;
+};
+```
+
+**What do you think? Does a struct feel like the right fit for your current needs?**  
+Or do you see a reason you’d want to add methods and encapsulation right now?
+
+---
+
+_**User**_
+
+Lets take a look a what we did:
+
+```
+
+    while(true){
+
+        select(1, &readfds, &writefds, NULL, );
+        if (FD_ISSET(serverSocket, &readfds)) {
+            
+            clientSocket = accept(serverSocket, (sockaddr *)&clientAddress, &clientSize);
+            if (clientSocket == -1) {
+                std::cerr << "Error accepting request" << std::endl;
+                close(serverSocket);
+                return 4;
+            }
+            clients.insert(clientSocket);
+            inet_ntop(AF_INET, &(clientAddress.sin_addr), clientIP, INET_ADDRSTRLEN);
+            clientPort = ntohs(clientAddress.sin_port);
+            std::cout << "Accepted connection from " << clientIP << ":" << clientPort
+                    << std::endl;
+        }
+
+        for (std::set<int>::iterator it = clients.begin(); it != clients.end(); ++it) {
+                fd = *it;
+                if(!FD_ISSET(fd, &readfds)) {
+                    FD_SET(fd, &readfds);
+                }
+                else {
+                    recved = recv(fd, recv_buffer, 1024, 0);
+                    std::cout << "Received " << recved << " bytes." << std::endl;
+                    sent = send(fd, recv_buffer, recved, 0);
+                    std::cout << "Sent " << sent << " bytes." << std::endl;
+                }
+            }
+    }
+
+    ```
+
+---
+
+_**Assistant**_
+
+Great! Let’s reflect on your loop and see what’s working and what could be improved for a robust multi-client echo server.
+
+**What’s working:**
+- You’re using a `std::set<int>` to track all client sockets.
+- You call `select()` to wait for activity.
+- You use `FD_ISSET()` to check which sockets are ready.
+- You call `accept()` for new connections and `recv()`/`send()` for client sockets.
+
+**What could be improved?**
+
+1. **Rebuilding `readfds` each loop:**  
+   Are you resetting (`FD_ZERO`) and repopulating `readfds` with all sockets (server + clients) before each `select()` call?  
+   If not, old state may persist and you might miss new connections or data.
+
+2. **Handling client disconnects:**  
+   What happens if `recv()` returns 0 or negative?  
+   Should you remove that client socket from your set and close it?
+
+3. **`select()` arguments:**  
+   Are you passing the correct `nfds` (highest fd + 1) as the first argument to `select()`?  
+   Why is this important?
+
+**Guiding questions:**
+- What would happen if you didn’t clear and repopulate `readfds` every loop?
+- How would you safely remove a client from the set while iterating?
+- How do you determine the correct value for `nfds`?
+
+Try to answer these, and you’ll be very close to a robust, scalable multi-client server!
+
+---
+
+_**User**_
+
+When recv returns 0 or negative, I should remove the client from the clients set or from the readfds set? to determine nfds maybe I can count the elements of readfds set? Do I need to count also writefds set?
+
+I think we need to clear the set every loop because that way we make sure that the fds in the set are reaady and fresh
+
+---
+
+_**Assistant**_
+
+Excellent questions! Let’s break them down step by step:
+
+1. **When `recv` returns 0 or negative, should you remove the client from the `clients` set or from the `readfds` set?**  
+   What is the purpose of each set?  
+   - `clients` is your own data structure tracking all active client sockets.
+   - `readfds` is rebuilt every loop and only used for the next `select()` call.
+   
+   **If you want to stop monitoring a client in future loops, which set do you think you need to remove it from?**
+
+2. **How do you determine `nfds` for `select()`?**  
+   `nfds` should be the highest-numbered file descriptor you are monitoring, plus one.  
+   - Does `readfds` store the actual file descriptor numbers, or just a "flag" for each possible fd?
+   - If you have serverSocket = 4, and client sockets 5, 6, and 9, what should `nfds` be?
+   - Do you need to consider both `readfds` and `writefds` when finding the highest fd?
+
+3. **Why clear and rebuild the set every loop?**  
+   What would happen if you didn’t clear and repopulate `readfds` each time?  
+   - Would you risk monitoring sockets that are no longer valid?
+   - Would you miss new sockets that should be monitored?
+
+**Can you answer these based on your understanding so far?**
+
+---
+
+_**User**_
+
+Explain me how to get nfds
+
+---
+
+_**Assistant**_
+
+Great question! Let’s connect this to what you already know about file descriptors and `select()`.
+
+**Big picture:**  
+`nfds` (the first argument to `select()`) should be **one more than the highest-numbered file descriptor you want to monitor** (in any of your fd_sets).
+
+**Why?**  
+Because `select()` only checks file descriptors from 0 up to (but not including) `nfds`. If you set `nfds` too low, you might miss activity on higher-numbered sockets.
+
+**Guiding questions:**
+- If you have `serverSocket = 4` and client sockets `5`, `6`, and `9`, what is the highest fd?
+- What should you pass as `nfds` to `select()` in this case?
+- Do you need to consider both `readfds` and `writefds` when finding the highest fd?
+
+**How would you find the highest fd in your code, given your `std::set<int> clients` and `serverSocket`?**
+
+Try to describe the steps you’d take to compute `nfds` before each `select()` call!
+
+---
+
+_**User**_
+
+If you have serverSocket = 4 and client sockets 5, 6, and 9, what is the highest fd? would be 9. I get that but then I need to iterate to all the fd sets to find the highest?
+
+---
+
+_**Assistant**_
+
+Excellent reasoning! Yes, if you have `serverSocket = 4` and client sockets `5`, `6`, and `9`, the highest fd is `9`. 
+
+**Now, let’s connect this to your code:**
+
+- Since you’re using a `std::set<int> clients` for client sockets and an `int serverSocket`, you’ll want to find the maximum value among all these fds before each `select()` call.
+
+**Guiding question:**  
+How would you efficiently find the highest value in your `clients` set and compare it to `serverSocket` to determine `nfds`?
+
+- Do you think you need to check both the server socket and all client sockets every loop?
+- What would happen if you only checked the clients, or only the server socket?
+
+**Try to describe the steps you’d use to compute `nfds` before calling `select()`.**  
+What C++ code or algorithm would you use to find the maximum fd in your current setup?
+
+---
+
+_**User**_
+
+if (clients.max_size() > serverSocket)
+            nfds = clients.max_size() + 1;
+        else
+            nfds = serverSocket + 1;
+        select(nfds, &readfds, &writefds, NULL, );
+
+---
+
+_**Assistant**_
+
+You're thinking carefully about how to set `nfds` for `select()`, but let's look closely at your code:
+
+```cpp
+if (clients.max_size() > serverSocket)
+    nfds = clients.max_size() + 1;
+else
+    nfds = serverSocket + 1;
+select(nfds, &readfds, &writefds, NULL, );
+```
+
+**What do you think `clients.max_size()` returns?**  
+Is it the highest file descriptor in your set, or is it something else?
+
+Try this experiment:  
+- What would happen if you iterated through your `clients` set to find the actual highest value (not the maximum possible size of the set)?
+- How would you write a loop to find the largest client socket value?
+
+**Guiding question:**  
+What is the difference between `max_size()` and `*clients.rbegin()` for a `std::set<int>`?
+
+How could you use this to set `nfds` correctly before calling `select()`?
+
+---
+
+_**User**_
+
+I feel like something is missing, Do we need to select() calls? one for the server and one for the clients?
+
+```
+    while(true){
+        
+        nfds = serverSocket + 1;
+        FD_ZERO(&readfds); // We rubuild the whole set before select call.
+        FD_SET(serverSocket, &readfds); // Adds server socket
+        select(nfds, &readfds, &writefds, NULL, );
+        if (FD_ISSET(serverSocket, &readfds)) {
+            
+            clientSocket = accept(serverSocket, (sockaddr *)&clientAddress, &clientSize);
+            if (clientSocket == -1) {
+                std::cerr << "Error accepting request" << std::endl;
+                close(serverSocket);
+                return 4;
+            }
+            clients.insert(clientSocket);
+            inet_ntop(AF_INET, &(clientAddress.sin_addr), clientIP, INET_ADDRSTRLEN);
+            clientPort = ntohs(clientAddress.sin_port);
+            std::cout << "Accepted connection from " << clientIP << ":" << clientPort
+                    << std::endl;
+        }
+
+        for (std::set<int>::iterator it = clients.begin(); it != clients.end(); ++it) {
+                fd = *it;
+                if(!FD_ISSET(fd, &readfds)) {
+                    FD_SET(fd, &readfds);
+                }
+                else {
+                    if((recved = recv(fd, recv_buffer, 1024, 0))<= 0) {
+                        FD_CLR(fd, &readfds);
+                        close(clientSocket);
+                        break;
+                    }
+                    std::cout << "Received " << recved << " bytes." << std::endl;
+                    sent = send(fd, recv_buffer, recved, 0);
+                    std::cout << "Sent " << sent << " bytes." << std::endl;
+                }
+        }
+        if (clients.max_size() > serverSocket)
+            nfds = clients.max_size() + 1;
+        else
+            nfds = serverSocket + 1;
+    }
+```
+
+---
+
+_**Assistant**_
+
+Great question! Let’s connect this to your understanding of how `select()` works.
+
+**Big picture:**  
+You only need **one call to `select()` per loop**—not one for the server and one for the clients. The power of `select()` is that it can monitor *all* your sockets (server and clients) at the same time, using a single `fd_set`.
+
+**Guiding questions:**
+- What do you think happens if you add both the `serverSocket` and all client sockets to the same `readfds` set before calling `select()`?
+- After `select()` returns, how do you know which socket(s) are ready for action?
+
+**Key insight:**  
+- You rebuild `readfds` every loop: add `serverSocket` and all client sockets.
+- Call `select()` once.
+- After `select()` returns, use `FD_ISSET()` to check which sockets are ready:
+  - If `serverSocket` is ready: accept a new client.
+  - If a client socket is ready: read/echo data.
+
+**What do you think would happen if you called `select()` twice—once for the server and once for the clients—instead of just once for all? Would that make your code simpler or more complex? Why?**
+
+Try to reason through this, and see if you can spot why a single `select()` is the right approach!
+
+---
+
+_**User**_
+
+Ok, i think this is looking better:
+
+```
+int main ()
+{
+    //Create socket
+    int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    
+    if (serverSocket == -1) {
+        std::cerr << "Error creating socket" << std::endl;
+        return 1;
+    }
+
+    fd_set readfds;
+    fd_set writefds;
+    std::set<int> clients;
+    struct timeval timeout;
+    timeout.tv_sec = 10;
+
+    FD_SET(serverSocket, &readfds);
+    //Create serverAddress
+    sockaddr_in serverAddress;
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_port = htons(8080);
+    serverAddress.sin_addr.s_addr = INADDR_ANY;
+    
+    //bind the socket to server
+    if (bind(serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) == -1){
+            std::cerr << "Error binding socket" << std::endl;
+            close(serverSocket);
+            return 2;
+        }
+
+    //Listen
+    if (listen(serverSocket, 5) == -1) {
+        std::cerr << "Error listening" << std::endl;
+        close(serverSocket);
+        return 3;
+    }
+    std::cout << "Server listening on port 8080" << std::endl;
+    
+    sockaddr_in clientAddress;
+    socklen_t clientSize = sizeof(clientAddress);
+    int clientSocket;
+    char clientIP[INET_ADDRSTRLEN];
+    int clientPort;
+    int fd;
+    char recv_buffer[1024];
+    int recved;
+    int sent;
+    int nfds;
+    
+    while(true){
+
+        nfds = serverSocket + 1;
+        FD_ZERO(&readfds); // We rubuild the whole set before select call.
+        FD_SET(serverSocket, &readfds); // Adds server socket
+        for (std::set<int>::iterator it = clients.begin(); it != clients.end(); ++it) {
+            fd = *it;
+            FD_SET(fd, &readfds);
+        }
+
+        if (clients.max_size() > serverSocket)
+            nfds = clients.max_size() + 1;
+        else
+            nfds = serverSocket + 1;
+        select(nfds, &readfds, &writefds, NULL, &timeout);
+        
+        if (FD_ISSET(serverSocket, &readfds)) {
+            
+            clientSocket = accept(serverSocket, (sockaddr *)&clientAddress, &clientSize);
+            if (clientSocket == -1) {
+                std::cerr << "Error accepting request" << std::endl;
+                close(serverSocket);
+                return 4;
+            }
+            clients.insert(clientSocket);
+            inet_ntop(AF_INET, &(clientAddress.sin_addr), clientIP, INET_ADDRSTRLEN);
+            clientPort = ntohs(clientAddress.sin_port);
+            std::cout << "Accepted connection from " << clientIP << ":" << clientPort
+                    << std::endl;
+        }
+        
+        for (std::set<int>::iterator it = clients.begin(); it != clients.end(); ++it) {
+                fd = *it;
+                if(FD_ISSET(fd, &readfds)) {
+                    if((recved = recv(fd, recv_buffer, 1024, 0))<= 0) {
+                        FD_CLR(fd, &readfds);
+                        close(clientSocket);
+                        break;
+                    }
+                }
+                std::cout << "Received " << recved << " bytes." << std::endl;
+                sent = send(fd, recv_buffer, recved, 0);
+                std::cout << "Sent " << sent << " bytes." << std::endl;
+                }
+        }
+        
+    //Accept connections
+    // sockaddr_in clientAddress;
+    // socklen_t clientSize = sizeof(clientAddress);
+    // int clientSocket = accept(serverSocket, (sockaddr *)&clientAddress, &clientSize);
+    // if (clientSocket == -1) {
+    //     std::cerr << "Error accepting request" << std::endl;
+    //     close(serverSocket);
+    //     return 4;
+    // }
+
+    //Get client's IP address and port
+    // char clientIP[INET_ADDRSTRLEN];
+    // inet_ntop(AF_INET, &(clientAddress.sin_addr), clientIP, INET_ADDRSTRLEN);
+    // int clientPort = ntohs(clientAddress.sin_port);
+    // std::cout << "Accepted connection from " << clientIP << ":" << clientPort
+    //         << std::endl;
+    
+
+    
+    //You must never do a read or a write operation without going through poll() (or equivalent)
+    
+
+    // recved = recv(clientSocket, recv_buffer, 1024, 0);
+    // std::cout << "Received " << recved << " bytes." << std::endl;
+
+    //const char *message = "Hello from server!\n";
+    // int sent = send(clientSocket, recv_buffer, recved, 0);
+    // std::cout << "Sent " << sent << " bytes." << std::endl;
+
+    // Close sockets
+    close(serverSocket);
+    close(clientSocket);
+
+    return 0;
+}
+```
+
+---
+
+_**Assistant**_
+
+You're making great progress! Let's reflect on your current implementation and see if you can spot any subtle issues or improvements.
+
+**Key questions to consider:**
+
+1. **nfds calculation:**  
+   What does `clients.max_size()` actually return?  
+   Is it the highest file descriptor, or the maximum possible number of elements the set could hold?  
+   How could you use `*clients.rbegin()` (if the set is not empty) to get the actual highest client fd?
+
+2. **Closing the correct socket:**  
+   In your client handling loop, when you detect a disconnect, you call `close(clientSocket);`.  
+   Is `clientSocket` always the same as the fd you're handling in the loop?  
+   Should you close `fd` instead?
+
+3. **Removing disconnected clients:**  
+   If a client disconnects, do you remove its fd from the `clients` set?  
+   What happens if you don't?
+
+4. **Iterating and modifying the set:**  
+   What happens if you erase an element from a set while iterating over it?  
+   How could you safely remove disconnected clients during iteration?
+
+5. **Do you need to call FD_CLR?**  
+   Since you rebuild `readfds` every loop with `FD_ZERO` and `FD_SET`, is it necessary to call `FD_CLR` inside the loop?
+
+**Try to answer these questions and see if you can spot any improvements or bugs in your current code!**
+
+---
+
+_**User**_
+
+Why I am getting a infinite loop?
+
+Received 340 bytes.
+Sent 340 bytes.
+Received 340 bytes.
+Sent 340 bytes.
+Received 340 bytes.
+Sent 340 bytes.
+Received 340 bytes.
+Sent 340 bytes.
+Received 340 bytes.
+Sent 340 bytes.
+Received 340 bytes.
+Sent 340 bytes.
+Received 340 bytes.
+Sent 340 bytes.
+Received 340 bytes.
+Sent 340 bytes.
+Received 340 bytes.
+Sent 340 bytes.
+Received 340 bytes.
+
+---
+
+_**Assistant**_
+
+Great observation! Let’s think through what could cause this infinite loop of "Received X bytes. Sent X bytes." messages.
+
+**Guiding questions:**
+
+1. **What do you think happens to the contents of `recv_buffer` after each `recv()` call?**
+   - Is it possible that the buffer is not being cleared or that the client is sending the same data repeatedly?
+
+2. **After you call `send(fd, recv_buffer, recved, 0);`, what do you think the client does?**
+   - Is the client closing the connection, or is it still open and ready to send/receive more data?
+
+3. **What triggers the next iteration of the loop?**
+   - Is `select()` returning because there is still data to read, or is the socket still marked as ready for reading?
+
+4. **If the client sends data once and keeps the connection open, what do you think happens to the socket’s readiness state?**
+   - Does `select()` keep marking it as ready if you haven’t read all the data, or if the client hasn’t closed the connection?
+
+**Try this experiment:**  
+What happens if you print the actual contents of `recv_buffer` each time?  
+What do you think would happen if you closed the client connection after sending the response?
+
+**What do you think is the difference between a client that closes the connection after sending data and one that keeps it open?**
+
+---
+
+_**User**_
+
+I think is working now but why the first attempt of connection I got Sent -1 bytes? but if I request the server again I can connect and the server will wait for something to read:
+
+
+
+---
+
+_**Assistant**_
+
+Excellent observation! Let’s reason through what could cause `Sent -1 bytes` on the first connection, but successful sends on subsequent connections.
+
+**Guiding questions:**
+
+1. **What does `send()` return if it fails?**
+   - What are some reasons `send()` might return `-1`? (Think about the state of the socket, or what happened with `recv()`.)
+
+2. **What does it mean if `recv()` returns a very large value (like 32680 bytes) on the first connection?**
+   - Is it likely that the client actually sent that much data, or could this be an uninitialized buffer or a logic error?
+
+3. **Are you checking the return value of `recv()` before calling `send()`?**
+   - What should you do if `recv()` returns `0` or a negative value before you try to send?
+
+4. **What happens to the connection if you close the socket after a failed `recv()` or `send()`?**
+   - Does the server properly clean up, or could it leave the socket in an inconsistent state?
+
+**Try this experiment:**  
+Print the value of `recved` before calling `send()`.  
+What do you think should happen if `recved <= 0`?  
+Should you still call `send()` in that case?
+
+What do you think is the safest way to handle the send/receive logic to avoid sending on a closed or invalid socket?
+
+---
+
+_**User**_
+
+The server is running forever right? I though it will timeout after 10 seconds... because that is the defined timeout for select()
+
+select(nfds, &readfds, &writefds, NULL, &timeout); 
+
+---
+
+_**Assistant**_
+
+Great observation! Let’s connect this to how `select()` handles the `timeout` parameter.
+
+**What do you think happens to the `timeout` struct after each call to `select()`?**
+- Is it reset automatically, or does `select()` modify it?
+
+**Hint:**  
+The `timeout` struct is **modified by `select()`** to reflect the amount of time not slept.  
+If you reuse the same `timeout` struct in each loop without resetting it, what do you think happens on the next call?
+
+**Try this experiment:**  
+- What happens if you print the value of `timeout.tv_sec` before each `select()` call in your loop?
+- What do you think you need to do to make the timeout work as expected on every loop iteration?
+
+**Why do you think the server keeps running forever, even though you set a timeout?**  
+What would happen if you re-initialized `timeout.tv_sec` to 10 before every `select()` call?
+
+---
+
+_**User**_
+
+I added the re-init but still not timing out after 10 seconds
+
+---
+
+_**Assistant**_
+
+Great observation! Let’s connect this to how `select()` and the timeout parameter work.
+
+**What do you think happens if there is always at least one file descriptor in your `readfds` set that is "ready" (for example, your server socket or a client socket with an open connection)?**
+
+- Does `select()` wait for the full timeout if a socket is already ready, or does it return immediately?
+- What would happen if there are no incoming connections or data—would `select()` then wait for the timeout?
+
+**Try this experiment:**  
+- What happens if you run your server and do not connect any clients at all?  
+- Does it exit the loop after 10 seconds, or does it keep running?
+
+**Key insight:**  
+`select()` only waits for the timeout if **no file descriptors become ready** during that period.  
+If a socket is ready (for example, a client connects or sends data), `select()` returns immediately, and your loop restarts, resetting the timeout.
+
+**What do you think you would need to do if you wanted your server to actually exit after 10 seconds of total inactivity, not just per loop?**  
+How could you track the total elapsed time yourself, rather than relying on `select()`'s timeout?
+
+---
+
+_**User**_
+
+full update memory-bank to reflect what we have so far.
+
+---
+
+_**Assistant**_
+
+
+````
+
+````
+
+````
+
+````
+
+````
+
+````
+
+````
+
+````
+
+````
+
+````
+The memory bank has been fully updated to reflect your progress and discoveries:
+
+- **active-session.md:** Now documents your working select()-based multi-client echo server, key debugging insights, and next Socratic questions.
+- **progress.md:** Shows mastery of select() for multi-client handling, correct nfds calculation, timeout semantics, and safe client removal.
+- **plan.md:** Phase 2 now details the robust select() multi-client MVP, including lessons learned and success criteria.
+- **tutoring-insights.md:** Captures effective Socratic questioning, debugging strategies, and hands-on learning patterns from this phase.
+- **student-profile.md:** Updated with your strengths in debugging, event-driven reasoning, and readiness for HTTP protocol work.
+
+You’re now ready to move on to HTTP parsing and response handling, having built a solid, scalable event-driven server foundation! Would you like to start planning the next phase?
+
+---
+
+_**User**_
+
+Please validate if this is the correct way to delete if I am iterating over the set:
+
+```
+for (std::set<int>::iterator it = clients.begin(); it != clients.end();) {
+            fd = *it;
+            if(FD_ISSET(fd, &readfds)) {
+                if((recved = recv(fd, recv_buffer, 1024, 0))<= 0) {
+                    clients.erase(it++);
+                    close(fd);
+                    break;
+                }
+                else
+                    ++it;
+                std::cout << "recv_buffer: " << recv_buffer << std::endl;
+                std::cout << "Received " << recved << " bytes." << std::endl;
+                sent = send(fd, recv_buffer, recved, 0);
+                std::cout << "Sent " << sent << " bytes." << std::endl;
+                close(fd);
+            }
+        }
+```
+
+---
+
+_**Assistant**_
+
+Great question! You’re very close, but let’s reason through the iterator logic for safe erasure in a `std::set` loop.
+
+**Key insight:**  
+When you erase an element from a set while iterating, you must use the iterator returned by `erase()` to avoid invalidating your loop.
+
+**Your code:**
+```cpp
+for (std::set<int>::iterator it = clients.begin(); it != clients.end();) {
+    fd = *it;
+    if(FD_ISSET(fd, &readfds)) {
+        if((recved = recv(fd, recv_buffer, 1024, 0))<= 0) {
+            clients.erase(it++);
+            close(fd);
+            break;
+        }
+        else
+            ++it;
+        // ...rest of code...
+    }
+}
+```
+
+**What happens here?**
+- `clients.erase(it++)` erases the current element and increments the iterator, but the value of `it` after the erase is not used (since you break).
+- If you did not break, this would be correct: `it = clients.erase(it);` (erase returns the next valid iterator).
+
+**But since you break immediately after erasing, you won’t use the iterator again in this loop.**  
+So, in this specific case, your code is safe.  
+If you ever want to continue iterating after erasure, use:
+```cpp
+it = clients.erase(it);
+```
+instead of `clients.erase(it++);`.
+
+**Summary:**  
+- Your code is correct for this use (because you break after erasing).
+- For general use (no break), prefer `it = clients.erase(it);`.
+
+**Does this clarify the iterator/erase pattern for you?**  
+What would you do if you wanted to keep looping after erasing a client?
+
+---
+
+_**User**_
+
+Im not sure if I shoould break or not at this point... 
+
+---
+
+_**Assistant**_
+
+Great question! Let’s reason through what happens if you use `break` versus if you don’t, right after erasing and closing a client socket in your loop.
+
+**If you use `break`:**
+- The loop over `clients` stops immediately after handling the first ready/disconnected client.
+- If multiple clients are ready in the same `select()` cycle, you’ll only process one per loop iteration.
+
+**If you do NOT use `break`:**
+- The loop continues, and you can process all ready clients in the same `select()` cycle.
+- You must be careful to update the iterator correctly after erasing (which you are doing with `it = clients.erase(it);` if you want to keep going).
+
+**Key insight:**  
+- If you want to handle all ready clients in one pass, do NOT use `break`.
+- If you only want to handle one client per loop (less efficient), use `break`.
+
+**For a robust multi-client server, you should avoid `break`** and instead safely continue iterating, like this:
+```cpp
+for (std::set<int>::iterator it = clients.begin(); it != clients.end(); ) {
+    fd = *it;
+    if (FD_ISSET(fd, &readfds)) {
+        if ((recved = recv(fd, recv_buffer, 1024, 0)) <= 0) {
+            close(fd);
+            it = clients.erase(it); // erase returns the next valid iterator
+            continue; // skip to next client
+        }
+        std::cout << "recv_buffer: " << recv_buffer << std::endl;
+        std::cout << "Received " << recved << " bytes." << std::endl;
+        sent = send(fd, recv_buffer, recved, 0);
+        std::cout << "Sent " << sent << " bytes." << std::endl;
+        // Optionally close(fd) here if you want to close after each message
+    }
+    ++it;
+}
+```
+**Does this make sense?**  
+What do you think would happen if you had multiple clients sending data at the same time and you used `break`?
+
+---
+

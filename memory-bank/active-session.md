@@ -9,43 +9,40 @@
 **Student Identifier:** alejiri
 
 ## Current Problem/Topic Focus:
-- **Topic:** Webserv HTTP Server Implementation - select() Integration
-- **Specific Issue:** Transitioning from echo server MVP to select()-based multi-client handling
-- **Related Plan:** MVP completed (echo server), now implementing select() for non-blocking I/O
-- **Plan Step:** Understanding select() function parameters and preparing for implementation
+- **Topic:** Webserv HTTP Server Implementation - select() Multi-client MVP
+- **Specific Issue:** Building a robust multi-client echo server using select()
+- **Related Plan:** MVP echo server completed, now iterating on select() for multiple clients
+- **Plan Step:** Implementing select() main loop, client management, and correct nfds calculation
 
 ## Current Code Under Review:
 ```cpp
-// Echo server MVP completed in main.cpp
-// Basic socket(), bind(), listen(), accept(), recv(), send() flow working
-// Current file: main.cpp with functional echo server
-// Next: Integrate select() for multiple client handling
+// main.cpp: Multi-client echo server using select()
+// Uses std::set<int> for client sockets, rebuilds fd_set each loop
+// Handles accept(), recv(), send(), and client disconnects
 ```
 
 ## Student's Current Question/Blocker:
-- Just received foundational explanation of select() function and parameters
-- Has working echo server that handles one connection
-- Understanding file descriptors to monitor: serverSocket for new connections, clientSocket(s) for data
-- Ready to implement select() integration
+- How to correctly calculate nfds for select()
+- How to safely remove disconnected clients from set while iterating
+- Why select() timeout does not exit server after 10 seconds
+- How to avoid infinite loops and handle send/recv errors
 
 ## Key Points from Last Exchange:
-- Successfully completed echo server MVP using basic socket API
-- Received foundational explanation of select() prototype and parameters
-- Understands fd_set operations: FD_ZERO, FD_SET, FD_CLR, FD_ISSET
-- Grasps that select() monitors multiple file descriptors for readiness
-- Identified need to monitor serverSocket (new connections) and clientSocket(s) (existing client data)
+- select() only needs to be called once per loop, monitoring all sockets
+- nfds must be highest fd in use + 1 (using *clients.rbegin() and serverSocket)
+- Timeout must be re-initialized before each select() call
+- select() returns immediately if any fd is ready, not after timeout
+- Properly closing and removing client sockets on disconnect
 
 ## Next Socratic Question/Guidance Plan:
-- **Planned Question:** "Looking at your echo server, what file descriptors do you need to monitor with select()?"
-- **Reasoning:** Apply select() knowledge to current code structure
-- **Backup Approaches:** Guide through server loop redesign, fd_set setup, or select() return value handling
-- **Plan Alignment:** Transform single-client echo server into multi-client select()-based server
+- "How do you safely erase from a set while iterating?"
+- "What happens if you call send() after recv() returns 0?"
+- "How would you track total server idle time if you want a true timeout?"
 
 ## Session Notes:
-- Student is ready for advanced systems programming after C++ module completion
-- Need to leverage existing C++ knowledge for network programming
-- Focus on non-blocking I/O, HTTP protocol, and server architecture
-- Student shows strong problem-solving skills from previous modules
+- Student has implemented a working multi-client echo server using select()
+- Demonstrated strong debugging and architectural reasoning
+- Ready to move to HTTP parsing and response in next phase
 
 ---
 *This file should be updated after each exchange with the student and cleared when moving to a new problem/topic. Important insights should be moved to → progress.md or → tutoring-insights.md before clearing.*

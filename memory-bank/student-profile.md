@@ -46,6 +46,9 @@
 
 ## Known Strengths (Observed):
 - High self-motivation and discipline
+- **Debugging and Iterative Reasoning:** Demonstrates strong ability to debug, reason about event-driven code, and adapt architecture based on runtime behavior (e.g., select() timeout, infinite loop, safe set erasure)
+- **Prefers hands-on experiments:** Learns best by running code, observing output, and iterating quickly
+- **Ready for HTTP protocol phase:** Has mastered multi-client event loop and is prepared to move to HTTP parsing/response
 
 ## Potential Areas for Gentle Nudging/Support:
 - Actively working on building a technical foundation to transition into software engineering via 42 Coding School Berlin

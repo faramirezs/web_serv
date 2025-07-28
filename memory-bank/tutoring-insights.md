@@ -219,11 +219,12 @@
 - **Socket API progression:** Starting with single-connection echo server MVP, then adding select() for multiple connections follows natural complexity building
 - **System call parameter mastery:** Students need concrete parameter explanations for system calls before they can reason about usage patterns
 
-## Effective Network Programming Teaching Sequence:
-1. **Socket basics:** socket(), bind(), listen(), accept() with single client
-2. **Foundation explanation:** Function prototypes and parameter meanings for new system calls  
-3. **Conceptual connection:** "What file descriptors need monitoring?" before syntax details
-4. **Incremental implementation:** Add select() to existing working code rather than starting from scratch
+## select() Multi-client MVP Tutoring Insights (2025-07-28)
+- Socratic questioning about fd_set, nfds, and timeout semantics led to deep understanding
+- Debugging infinite loop and timeout required careful reasoning about select() return conditions
+- Emphasized safe set iteration and resource cleanup
+- Student benefited from hands-on code experiments and immediate feedback
+- Next: Use same questioning approach for HTTP parsing and response
 
 ---
 *(This file is updated whenever a new generalizable insight is gained. Use ISO 8601 date format: YYYY-MM-DD)*
