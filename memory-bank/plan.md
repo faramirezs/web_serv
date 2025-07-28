@@ -99,12 +99,23 @@
 - Safely remove disconnected clients from set while iterating
 **Success:** Multiple telnet clients connect, send/receive data, and disconnect cleanly
 
-### Phase 3: HTTP Protocol
+### Phase 3: Multi-Server Architecture (Planned 2025-07-28)
+**MVP Goal:** Support multiple listening servers, each with their own port and configuration
+- Design and implement a Server class to encapsulate server socket, port, and config
+- Design and implement a Client class to encapsulate client socket, address, and state
+- Use a container (e.g., std::vector<Server>) to manage multiple servers
+- Use a container (e.g., std::map<int, Client>) to manage all active clients across all servers
+- Update select() loop to monitor all server sockets and all client sockets
+- On new connection, determine which Server instance accepted the client and associate accordingly
+- Prepare for future config file parsing by making server setup data-driven
+**Success:** Multiple servers listen on different ports, accept clients independently, and echo data
+
+### Phase 4: HTTP Protocol
 - **Goal:** Serve basic HTTP responses instead of echo
 - **Features:** Parse simple HTTP requests, return proper HTTP responses
 - **Key learning:** HTTP request/response format, status codes, headers
 
-### Phase 4: Enhanced Features
+### Phase 5: Enhanced Features
 - **Goal:** Configuration file, static file serving, error handling
 - **Features:** Dynamic port/IP configuration, serve HTML files, proper error pages
 
@@ -112,18 +123,28 @@
 
 ## Implementation Plan
 
-### Current Step: [To be updated during session]
-
-### Step 1: [To be defined]
-- **Goal:** [What this step achieves]
-- **Tasks:** [Specific actions to complete]
-- **Success Criteria:** [How to know this step is done]
+### Current Step: Design Multi-Server and Client Data Structures
+- **Goal:** Define Server and Client classes to support multiple servers and clients
+- **Tasks:**
+  - Design Server class (socket, port, config fields)
+  - Design Client class (socket, address, state fields)
+  - Refactor main loop to use containers of Server and Client objects
+  - Update select() logic to handle all server and client sockets
+- **Success Criteria:**
+  - Code compiles and runs with multiple servers listening on different ports
+  - Clients can connect to any server and receive echo responses
+  - Data structures are ready for future config file and HTTP parsing
 - **Status:** Not Started
 
-### Step 2: [To be defined]
-- **Goal:** [What this step achieves]
-- **Tasks:** [Specific actions to complete]
-- **Success Criteria:** [How to know this step is done]
+### Next Step: Implement and Test Multi-Server Support
+- **Goal:** Refactor code to support multiple servers and clients
+- **Tasks:**
+  - Implement Server and Client classes
+  - Refactor select() loop and connection handling
+  - Test with multiple ports and clients
+- **Success Criteria:**
+  - Multiple servers accept clients independently
+  - All clients receive correct echo responses
 - **Status:** Not Started
 
 ---
@@ -176,6 +197,13 @@
   - Debugged infinite loop and timeout behavior
   - Safely removed disconnected clients from set while iterating
   - Tested with multiple telnet clients - success!
+- ✅ **Multi-Server Architecture Design**: Designed Server and Client classes for multi-server support
+  - Server class encapsulates server socket, port, and config
+  - Client class encapsulates client socket, address, and state
+  - Chose std::vector<Server> for managing multiple servers
+  - Chose std::map<int, Client> for managing active clients across servers
+  - Updated select() loop design to monitor all server and client sockets
+  - Prepared for data-driven server setup for future config file parsing
 
 ### Current Focus:
 - **HTTP Protocol Implementation**: Parsing HTTP requests and serving HTTP responses

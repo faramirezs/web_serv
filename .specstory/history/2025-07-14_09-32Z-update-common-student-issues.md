@@ -4413,3 +4413,78 @@ What do you think would happen if you had multiple clients sending data at the s
 
 ---
 
+_**User**_
+
+take #file:plan.md and help me update it according to #file:plan-mode-instructions.md 
+
+I want to add a new phase after phase 2. We have multi-client and now I would like to have multi server. Also I like to wor on the appropiate data structures to handle this. I suspect I will need a server class and an client class, we will have several servers and several clients.
+
+---
+
+_**Assistant**_
+
+
+````
+
+````
+Your plan has been updated according to the plan-mode-instructions.md guidelines:
+
+- **A new Phase 3: Multi-Server Architecture** has been added after the multi-client MVP.
+- This phase focuses on designing and implementing appropriate Server and Client classes, supporting multiple servers (each with their own port/config) and multiple clients.
+- The implementation plan now includes concrete, actionable steps and clear success criteria for this phase.
+
+You’re now set up to design robust data structures and refactor your code for multi-server support, which will make future config file and HTTP features much easier to add. Would you like to start brainstorming the Server and Client class designs next?
+
+---
+
+_**User**_
+
+yes, lets start with this
+
+---
+
+_**Assistant**_
+
+Great! Let’s begin by focusing on the “Current Step: Design Multi-Server and Client Data Structures” from your plan.
+
+To ensure you’re building a solid foundation, let’s clarify your understanding and goals before jumping into code:
+
+1. What do you think are the essential responsibilities of a `Server` class versus a `Client` class in this context?  
+   (For example: What should each class “own” or manage—sockets, addresses, state, etc.?)
+
+Let’s start by having you articulate your ideas for these two classes. What fields and methods do you think each should have, and why?
+
+---
+
+_**User**_
+
+For the client I need to handle:
+
+sockaddr_in clientAddress;
+    socklen_t clientSize = sizeof(clientAddress);
+    int clientSocket;
+    char clientIP[INET_ADDRSTRLEN];
+    int clientPort;
+
+for the server
+
+sockaddr_in serverAddress;
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_port = htons(8080);
+    serverAddress.sin_addr.s_addr = INADDR_ANY;
+    int serverSocket
+
+
+---
+
+_**Assistant**_
+
+Excellent! You’ve identified the key fields for both `Client` and `Server`. Before we proceed to implementation, let’s reflect on the design:
+
+- Why do you think it’s important for the `Client` class to store both the socket and the address information?
+- For the `Server` class, what might be the benefit of encapsulating the socket and address together, rather than just using a socket integer?
+
+How would you expect these classes to interact with your main event loop and select()? What responsibilities should each class have regarding connection management and data handling?
+
+---
+
