@@ -7,10 +7,10 @@
 
 class Client
 {
-private:
-    /* data */
-public:
-    
-    Client(/* args */);
-    ~Client();
+    private:
+        /* data */
+    public:
+        
+        Client(/* args */);
+        ~Client();
 };
