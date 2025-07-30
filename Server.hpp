@@ -17,4 +17,6 @@ class Server
 
         sockaddr_in serverAddress;
         int serverSocket;
+        char serv_buffer[1024];
+        
 };

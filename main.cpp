@@ -20,7 +20,7 @@ struct s_master
     std::set<int> clients;
     std::map<int, int> requestFds;
     std::map<Request, Server> reqServMap;
-    std::map<int, Request> fdReqMap; 
+    std::map<int, Request> clientFdReqMap; 
     std::map<int, int> clientFdServFd;
 
     std::map<int, Server> clientFdServ;
@@ -117,6 +117,7 @@ void acceptRequests(s_master &master)
             // Probably we just need the map storing client fd and server.
             master.clientFdServ.insert(std::make_pair(req->clientSocket, (*it)));
             master.RequestClientFd.insert(std::make_pair(Request(*req), req->clientSocket));
+            master.clientFdReqMap.insert(std::make_pair(req->clientSocket, Request(*req)));
             
             std::cout << "Accepted connection from " << req->clientIP << ":" << req->clientPort
                     << std::endl;
@@ -127,6 +128,38 @@ void acceptRequests(s_master &master)
 }
 
 void receiveRequests(s_master &master) 
+{
+    int fd;
+
+    for (std::set<int>::iterator it = master.clients.begin(); it != master.clients.end();) 
+    {
+        fd = *it;
+        if(FD_ISSET(fd, &master.readfds)) {
+            if((master.recved = recv(fd, master.clientFdReqMap[fd].req_buffer, 1024, 0))<= 0) {
+                if (master.recved == 0) {
+                    std::cerr << "Client disconnected gracefully\n";
+                } else {
+                    perror("recv failed");
+                }
+                master.clients.erase(it++);
+                close(fd);
+                continue;
+            }
+    
+            std::cout << "recv_buffer: " << master.clientFdReqMap[fd].req_buffer << std::endl;
+            std::cout << "Received " << master.recved << " bytes." << std::endl;
+            master.sent = send(fd, master.clientFdReqMap[fd].req_buffer, master.recved, 0);
+            std::cout << "Sent " << master.sent << " bytes." << std::endl;
+            //close(fd);
+            //it++;
+            //master.recved = 0;
+            //master.sent = 0;
+        }
+        it++;
+    }
+}
+
+void responRequests(s_master &master) 
 {
     int fd;
 
@@ -179,6 +212,7 @@ int main (int ac, char **av)
         select(master.nfds, &master.readfds, &master.writefds, NULL, &timeout);
         acceptRequests(master);
         receiveRequests(master);
+        responRequests(master);
     }
 
     closeServSocket(master);

@@ -23,4 +23,5 @@ class Request
         char clientIP[INET_ADDRSTRLEN];
         int clientPort;
         int servSocket;
+        char req_buffer[1024];
 };
