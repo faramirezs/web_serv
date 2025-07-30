@@ -1,7 +1,13 @@
 #include "Server.hpp"
 
+Server::Server()
+{
+    std::cout << "Server default constructor called" << std::endl;
+}
+
 Server::Server(int port)
 {
+    snprintf(serv_buffer, sizeof(serv_buffer), "Hello from server on port %d", port);
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_port = htons(port);
     serverAddress.sin_addr.s_addr = INADDR_ANY;
@@ -28,6 +34,7 @@ Server::Server(Server const & src)
     : serverAddress(src.serverAddress), serverSocket(src.serverSocket)
 {
 	std::cout << "Server copy constructor called." << std::endl;
+    std::memcpy(serv_buffer, src.serv_buffer, sizeof(serv_buffer));
 }
 
 Server& Server::operator=(Server const & rhs)
@@ -37,6 +44,7 @@ Server& Server::operator=(Server const & rhs)
 	{
 		serverAddress = rhs.serverAddress;
         serverSocket = rhs.serverSocket;
+        std::memcpy(serv_buffer, rhs.serv_buffer, sizeof(serv_buffer));
 	}
 	return(*this);
 }

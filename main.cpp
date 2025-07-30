@@ -23,7 +23,7 @@ struct s_master
     std::map<int, Request> clientFdReqMap; 
     std::map<int, int> clientFdServFd;
 
-    std::map<int, Server> clientFdServ;
+    std::map<int, Server*> clientFdServ;
     std::map<Request, int> RequestClientFd;
 
     int nfds;
@@ -68,10 +68,17 @@ void fdSetServer(s_master &master)
     }
 }
 
-void fdSetClient(s_master &master)
+void fdSetClientR(s_master &master)
 {
     for (std::set<int>::iterator it = master.clients.begin(); it != master.clients.end(); ++it) {
             FD_SET((*it), &master.readfds);
+        }
+}
+
+void fdSetClientW(s_master &master)
+{
+    for (std::set<int>::iterator it = master.clients.begin(); it != master.clients.end(); ++it) {
+            FD_SET((*it), &master.writefds);
         }
 }
 
@@ -115,7 +122,9 @@ void acceptRequests(s_master &master)
             inet_ntop(AF_INET, &(req->clientAddress.sin_addr), req->clientIP, INET_ADDRSTRLEN);
             req->clientPort = ntohs(req->clientAddress.sin_port);
             // Probably we just need the map storing client fd and server.
-            master.clientFdServ.insert(std::make_pair(req->clientSocket, (*it)));
+            master.clientFdServ.insert(std::make_pair(req->clientSocket, &(*it)));
+            std::cout << "Linked Server ptr for client " << req->clientSocket
+                << " is " << &(*it) << std::endl;
             master.RequestClientFd.insert(std::make_pair(Request(*req), req->clientSocket));
             master.clientFdReqMap.insert(std::make_pair(req->clientSocket, Request(*req)));
             
@@ -130,7 +139,9 @@ void acceptRequests(s_master &master)
 void receiveRequests(s_master &master) 
 {
     int fd;
-
+    if (master.clients.empty()) {
+        std::cout << "No more clients connected." << std::endl;
+    }
     for (std::set<int>::iterator it = master.clients.begin(); it != master.clients.end();) 
     {
         fd = *it;
@@ -146,14 +157,8 @@ void receiveRequests(s_master &master)
                 continue;
             }
     
-            std::cout << "recv_buffer: " << master.clientFdReqMap[fd].req_buffer << std::endl;
+            std::cout << "req_buffer: " << master.clientFdReqMap[fd].req_buffer << std::endl;
             std::cout << "Received " << master.recved << " bytes." << std::endl;
-            master.sent = send(fd, master.clientFdReqMap[fd].req_buffer, master.recved, 0);
-            std::cout << "Sent " << master.sent << " bytes." << std::endl;
-            //close(fd);
-            //it++;
-            //master.recved = 0;
-            //master.sent = 0;
         }
         it++;
     }
@@ -166,27 +171,21 @@ void responRequests(s_master &master)
     for (std::set<int>::iterator it = master.clients.begin(); it != master.clients.end();) 
     {
         fd = *it;
-        if(FD_ISSET(fd, &master.readfds)) {
-            if((master.recved = recv(fd, master.recv_buffer, 1024, 0))<= 0) {
-                if (master.recved == 0) {
-                    std::cerr << "Client disconnected gracefully\n";
-                } else {
-                    perror("recv failed");
-                }
+        std::cout << "Using Server ptr for client " << fd
+                << " is " << master.clientFdServ[fd] << std::endl;
+        if(FD_ISSET(fd, &master.writefds)) {
+            std::cout << "serv_buffer: " << master.clientFdServ[fd]->serv_buffer << std::endl;
+            master.sent = send(fd, master.clientFdServ[fd]->serv_buffer, strlen(master.clientFdServ[fd]->serv_buffer), 0);
+            master.sent = send(fd, master.clientFdReqMap[fd].req_buffer, strlen(master.clientFdReqMap[fd].req_buffer), 0);
+            std::cout << "Sent " << master.sent << " bytes." << std::endl;
+            if (master.sent <= 0) {
+                perror("sent failed"); 
                 master.clients.erase(it++);
                 close(fd);
-                continue;
             }
-    
-            std::cout << "recv_buffer: " << master.recv_buffer << std::endl;
-            std::cout << "Received " << master.recved << " bytes." << std::endl;
-            master.sent = send(fd, master.recv_buffer, master.recved, 0);
-            std::cout << "Sent " << master.sent << " bytes." << std::endl;
             //close(fd);
-            //it++;
-            //master.recved = 0;
-            //master.sent = 0;
-        }
+            continue;
+            }
         it++;
     }
 }
@@ -203,8 +202,10 @@ int main (int ac, char **av)
     
     while(true){
         FD_ZERO(&master.readfds); // We rubuild the whole set before select call.
+        FD_ZERO(&master.writefds);
         fdSetServer(master); // Adds server socket
-        fdSetClient(master); // Ads client socket
+        fdSetClientR(master); // Adds client socket read
+        fdSetClientW(master); // Adds client socket write
         getNfds(master);
         std::cerr << "getNfds: " << master.nfds << std::endl;
 
