@@ -15,6 +15,6 @@ class Server
         Server(int port);
         ~Server();
 
-        int serverSocket;
         sockaddr_in serverAddress;
+        int serverSocket;
 };

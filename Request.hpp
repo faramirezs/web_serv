@@ -13,6 +13,7 @@ class Request
         Request();
         Request(Request const & serv);
         Request& operator=(Request const & rhs);
+        bool operator<(const Request& other) const;
         Request(int port);
         ~Request();
 

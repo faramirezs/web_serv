@@ -9,7 +9,19 @@ Server::Server(int port)
     if (serverSocket == -1) {
         std::cerr << "Error creating socket" << std::endl;
     }
-    std::cout << "New Server created at port: " << port << std::endl;
+
+    // Bind the socket to server
+    if (bind(serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) == -1){
+        std::cerr << "Error binding socket" << std::endl;
+        close(serverSocket);
+    }
+        
+    // Listen
+    if (listen(serverSocket, 5) == -1) {
+        std::cerr << "Error listening" << std::endl;
+        close(serverSocket);
+    }
+    std::cout << "Server listening on port: " << port << std::endl;
 }
 
 Server::Server(Server const & src) 

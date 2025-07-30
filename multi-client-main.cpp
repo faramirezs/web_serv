@@ -73,7 +73,8 @@ int main ()
     
     while(true){
         FD_ZERO(&readfds); // We rubuild the whole set before select call.
-        FD_SET(serverSocket, &readfds); // Adds server socket
+        FD_SET(serverSocket, &readfds); // Adds server socket to set
+        // Adds client sockets to set
         for (std::set<int>::iterator it = clients.begin(); it != clients.end(); ++it) {
             fd = *it;
             FD_SET(fd, &readfds);
