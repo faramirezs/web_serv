@@ -7,28 +7,31 @@ Server::Server()
 
 Server::Server(int port)
 {
-    snprintf(serv_buffer, sizeof(serv_buffer), "Hello from server on port %d", port);
+    snprintf(serv_buffer, sizeof(serv_buffer), "Hello from server on port %d.\n", port);
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_port = htons(port);
     serverAddress.sin_addr.s_addr = INADDR_ANY;
+
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket == -1) {
-        std::cerr << "Error creating socket" << std::endl;
+        throw std::runtime_error("Error creating socket");
     }
 
-    // Bind the socket to server
-    if (bind(serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) == -1){
-        std::cerr << "Error binding socket" << std::endl;
+    fcntl(serverSocket, F_SETFL, O_NONBLOCK);
+
+    if (bind(serverSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) == -1) {
         close(serverSocket);
+        throw std::runtime_error("Error binding socket");
     }
-        
-    // Listen
+
     if (listen(serverSocket, 5) == -1) {
-        std::cerr << "Error listening" << std::endl;
         close(serverSocket);
+        throw std::runtime_error("Error listening on socket");
     }
+
     std::cout << "Server listening on port: " << port << std::endl;
 }
+
 
 Server::Server(Server const & src) 
     : serverAddress(src.serverAddress), serverSocket(src.serverSocket)
